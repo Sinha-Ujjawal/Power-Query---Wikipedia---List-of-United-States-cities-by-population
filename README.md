@@ -6,6 +6,7 @@ Following are the functions and queries-
 
 ![image](https://user-images.githubusercontent.com/32126716/236314373-277732c9-2498-4d4a-8756-2e0f26cd5f85.png)
 
+Refer excel [file](Wikipedia - List of United States cities by population.xlsx) for playing aroung with the queries.
 
 
 ## License
