@@ -1,60 +1,78 @@
-fn_pipe(
-    #"Wiki list of US cities by population"[Data]{6},
-    {
-        each Table.RenameColumns(_, {"Census-designated place", "Census Designated Place"})
-        , each Table.TransformColumns(
-            _
-            , {
-                {"2020 census", try_fn(Int32.From)}
-                , {"Change", fn_parse_percentage}
-                , {"2020 land area", each fn_pipe(_, {each fn_remove_strings(_, {"sq", "mi"}), try_fn(Number.FromText)})}
-                , {"2020 land area2", each fn_pipe(_, {each fn_remove_strings(_, {"km"}), try_fn(Number.FromText)})}
-                , {"2020 population density", each fn_pipe(_, {each fn_remove_strings(_, {"/", "sq", "mi"}), try_fn(Number.FromText)})}
-                , {"2020 population density2", each fn_pipe(_, {each fn_remove_strings(_, {"/", "km"}), try_fn(Number.FromText)})}
-                , {"Location", each Text.Select(Text.Split(_, " / "){1}, {"A".."Z", "a".."z", "0".."9", "-", " ", ".", "°"})}
-            }
-        )
-        , each Table.AddColumn(_, "LatLong", each fn_parse_latlong(_[Location]))
-        , each Table.AddColumn(_, "Latitude", each _[LatLong]{0})
-        , each Table.AddColumn(_, "Longitude", each _[LatLong]{1})
-        , each Table.RemoveColumns(_, {"Location", "LatLong"})
-        , each Table.RenameColumns(
-            _
-            , {
-                {"Change", "% Change"}
-                , {"2020 land area", "2020 land area (sq mi)"}
-                , {"2020 land area2", "2020 land area (sq km)"}
-                , {"2020 population density", "2020 population density (per sq mi)"}
-                , {"2020 population density2", "2020 population density (per sq km)"}
-            }
-        )
-        , each Table.TransformColumnTypes(
-            _
-            , {
-                {"2020 census", Int32.Type}
-                , {"% Change", Number.Type}
-                , {"2020 land area (sq mi)", Number.Type}
-                , {"2020 land area (sq km)", Number.Type}
-                , {"2020 population density (per sq mi)", Number.Type}
-                , {"2020 population density (per sq km)", Number.Type}
-                , {"Latitude", Number.Type}
-                , {"Longitude", Number.Type}
-            }
-        )
-        , each Table.SelectColumns(
-            _
-            , {
-                "Census Designated Place"
-                , "State"
-                , "2020 census"
-                , "% Change"
-                , "2020 land area (sq mi)"
-                , "2020 land area (sq km)"
-                , "2020 population density (per sq mi)"
-                , "2020 population density (per sq km)"
-                , "Latitude"
-                , "Longitude"
-            }
-        )
-    }
-)
+let
+    RawData                           = #"Wiki list of US cities by population"[Data]{6}
+    , ColNames                        = Table.ColumnNames(RawData)
+    , LastCensusYearPopCol            = ColNames{2}
+    , Last2LastCensusYearPopCol       = ColNames{3}
+    , LastCensusYearAreaCol           = ColNames{5}
+    , LastCensusYearArea2Col          = ColNames{6}
+    , LastCensusYearPopDensCol        = ColNames{7}
+    , LastCensusYearPopDens2Col       = ColNames{8}
+    , LastCensusYear                  = Text.BeforeDelimiter(LastCensusYearPopCol, " ")
+    , LastCensusYearAreaColRename     = Text.Combine({LastCensusYear, " land area (sq mi)"})
+    , LastCensusYearArea2ColRename    = Text.Combine({LastCensusYear, " land area (sq km)"})
+    , LastCensusYearPopDensColRename  = Text.Combine({LastCensusYear, " population density (per sq mi)"})
+    , LastCensusYearPopDens2ColRename = Text.Combine({LastCensusYear, " population density (per sq km)"})
+in
+    fn_pipe(
+        RawData,
+        {
+            each Table.RenameColumns(_, {"Census-designated place", "Census Designated Place"})
+            , each Table.TransformColumns(
+                _
+                , {
+                    {LastCensusYearPopCol       , try_fn(Int32.From)}
+                    , {Last2LastCensusYearPopCol, try_fn(Int32.From)}
+                    , {"Change"                 , fn_parse_percentage}
+                    , {LastCensusYearAreaCol    , each fn_pipe(_, {each fn_remove_strings(_, {"sq", "mi"}), try_fn(Number.FromText)})}
+                    , {LastCensusYearArea2Col   , each fn_pipe(_, {each fn_remove_strings(_, {"km"}), try_fn(Number.FromText)})}
+                    , {LastCensusYearPopDensCol , each fn_pipe(_, {each fn_remove_strings(_, {"/", "sq", "mi"}), try_fn(Number.FromText)})}
+                    , {LastCensusYearPopDens2Col, each fn_pipe(_, {each fn_remove_strings(_, {"/", "km"}), try_fn(Number.FromText)})}
+                    , {"Location"               , each Text.Select(Text.Split(_, " / "){1}, {"A".."Z", "a".."z", "0".."9", "-", " ", ".", "°"})}
+                }
+            )
+            , each Table.AddColumn(_, "LatLong", each fn_parse_latlong(_[Location]))
+            , each Table.AddColumn(_, "Latitude", each _[LatLong]{0})
+            , each Table.AddColumn(_, "Longitude", each _[LatLong]{1})
+            , each Table.RemoveColumns(_, {"Location", "LatLong"})
+            , each Table.RenameColumns(
+                _
+                , {
+                    {"Change", "% Change"}
+                    , {LastCensusYearAreaCol    , LastCensusYearAreaColRename}
+                    , {LastCensusYearArea2Col   , LastCensusYearArea2ColRename}
+                    , {LastCensusYearPopDensCol , LastCensusYearPopDensColRename}
+                    , {LastCensusYearPopDens2Col, LastCensusYearPopDens2ColRename}
+                }
+            )
+            , each Table.TransformColumnTypes(
+                _
+                , {
+                    {LastCensusYearPopCol             , Int32.Type}
+                    , {Last2LastCensusYearPopCol      , Int32.Type}
+                    , {"% Change"                     , Number.Type}
+                    , {LastCensusYearAreaColRename    , Number.Type}
+                    , {LastCensusYearArea2ColRename   , Number.Type}
+                    , {LastCensusYearPopDensColRename , Number.Type}
+                    , {LastCensusYearPopDens2ColRename, Number.Type}
+                    , {"Latitude"                     , Number.Type}
+                    , {"Longitude"                    , Number.Type}
+                }
+            )
+            , each Table.SelectColumns(
+                _
+                , {
+                    "Census Designated Place"
+                    , "State"
+                    , LastCensusYearPopCol
+                    , Last2LastCensusYearPopCol
+                    , "% Change"
+                    , LastCensusYearAreaColRename
+                    , LastCensusYearArea2ColRename
+                    , LastCensusYearPopDensColRename
+                    , LastCensusYearPopDens2ColRename
+                    , "Latitude"
+                    , "Longitude"
+                }
+            )
+        }
+    )
